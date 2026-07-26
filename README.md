@@ -93,3 +93,215 @@ This project is part of a Methodical Spring Boot assignment.
 *   Initial project setup template fetched from start.spring.io.
 *   Lombok is used for boilerplate-free POJO creation.
 *   JJWT is used for robust JWT signing and parsing.
+
+---
+
+## 📞 API Endpoints & JSON Examples
+
+All request bodies and responses use the `camelCase` naming style. Datetime fields use the **ISO 8601 UTC** format (ending with `Z` or representation offset).
+
+### 1. Events API
+* **Create an Event**
+  * `POST /api/events`
+  * **Request Body:**
+    ```json
+    {
+      "title": "Spring Boot Hackathon 2026",
+      "description": "24-hour coding challenge at campus.",
+      "location": "IT Center, Room 502",
+      "startAt": "2026-10-15T09:00:00",
+      "capacity": 50
+    }
+    ```
+  * **Response Body (201 Created with Location Header `/api/events/{id}`):**
+    ```json
+    {
+      "id": 1,
+      "title": "Spring Boot Hackathon 2026",
+      "description": "24-hour coding challenge at campus.",
+      "location": "IT Center, Room 502",
+      "startAt": "2026-10-15T09:00:00",
+      "capacity": 50,
+      "availableSeats": 50,
+      "status": "DRAFT",
+      "createdAt": "2026-07-26T01:47:31.123Z"
+    }
+    ```
+
+* **Get Event Details**
+  * `GET /api/events/{eventId}`
+  * **Response Body (200 OK):**
+    ```json
+    {
+      "id": 1,
+      "title": "Spring Boot Hackathon 2026",
+      "description": "24-hour coding challenge at campus.",
+      "location": "IT Center, Room 502",
+      "startAt": "2026-10-15T09:00:00",
+      "capacity": 50,
+      "availableSeats": 50,
+      "status": "DRAFT",
+      "createdAt": "2026-07-26T01:47:31.123Z"
+    }
+    ```
+
+* **Search/List Events (Paginated + Filtered)**
+  * `GET /api/events?title=hackathon&status=DRAFT&page=0&size=20`
+  * **Response Body (200 OK):**
+    ```json
+    {
+      "content": [
+        {
+          "id": 1,
+          "title": "Spring Boot Hackathon 2026",
+          "location": "IT Center, Room 502",
+          "startAt": "2026-10-15T09:00:00",
+          "availableSeats": 50,
+          "status": "DRAFT"
+        }
+      ],
+      "page": 0,
+      "size": 20,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+    ```
+
+* **Update Event**
+  * `PUT /api/events/{eventId}`
+  * **Request Body:**
+    ```json
+    {
+      "title": "Spring Boot Hackathon 2026 - Updated",
+      "description": "Now 36-hour coding challenge.",
+      "location": "Campus Main Hall",
+      "startAt": "2026-10-15T08:00:00",
+      "capacity": 100
+    }
+    ```
+  * **Response Body (200 OK):**
+    ```json
+    {
+      "id": 1,
+      "title": "Spring Boot Hackathon 2026 - Updated",
+      "description": "Now 36-hour coding challenge.",
+      "location": "Campus Main Hall",
+      "startAt": "2026-10-15T08:00:00",
+      "capacity": 100,
+      "availableSeats": 100,
+      "status": "DRAFT",
+      "createdAt": "2026-07-26T01:47:31.123Z"
+    }
+    ```
+
+* **Cancel Event**
+  * `POST /api/events/{eventId}/cancellations`
+  * **Response (204 No Content - Empty Body)**
+
+---
+
+### 2. Participants API
+* **Create Participant Profile**
+  * `POST /api/participants`
+  * **Request Body:**
+    ```json
+    {
+      "fullName": "Nguyen Van A",
+      "email": "vana@student.edu.vn"
+    }
+    ```
+  * **Response Body (201 Created with Location Header `/api/participants/{id}`):**
+    ```json
+    {
+      "id": 1,
+      "fullName": "Nguyen Van A",
+      "email": "vana@student.edu.vn",
+      "createdAt": "2026-07-26T01:47:31.123Z"
+    }
+    ```
+
+* **Get Participant Details**
+  * `GET /api/participants/{participantId}`
+  * **Response Body (200 OK):**
+    ```json
+    {
+      "id": 1,
+      "fullName": "Nguyen Van A",
+      "email": "vana@student.edu.vn",
+      "createdAt": "2026-07-26T01:47:31.123Z"
+    }
+    ```
+
+* **List Participants (Paginated)**
+  * `GET /api/participants?page=0&size=20`
+  * **Response Body (200 OK):**
+    ```json
+    {
+      "content": [
+        {
+          "id": 1,
+          "fullName": "Nguyen Van A",
+          "email": "vana@student.edu.vn",
+          "createdAt": "2026-07-26T01:47:31.123Z"
+        }
+      ],
+      "page": 0,
+      "size": 20,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+    ```
+
+---
+
+### 3. Registrations API
+* **Register a Participant for an Event**
+  * `POST /api/events/{eventId}/registrations`
+  * **Request Body:**
+    ```json
+    {
+      "participantId": 1
+    }
+    ```
+  * **Response Body (201 Created with Location Header `/api/events/{eventId}/registrations/{id}`):**
+    ```json
+    {
+      "id": 1,
+      "eventId": 1,
+      "eventTitle": "Spring Boot Hackathon 2026",
+      "participantId": 1,
+      "participantName": "Nguyen Van A",
+      "registeredAt": "2026-07-26T01:47:31.123Z",
+      "cancelledAt": null,
+      "status": "ACTIVE"
+    }
+    ```
+
+* **List Event Registrations (Paginated)**
+  * `GET /api/events/{eventId}/registrations?page=0&size=20`
+  * **Response Body (200 OK):**
+    ```json
+    {
+      "content": [
+        {
+          "id": 1,
+          "eventId": 1,
+          "eventTitle": "Spring Boot Hackathon 2026",
+          "participantId": 1,
+          "participantName": "Nguyen Van A",
+          "registeredAt": "2026-07-26T01:47:31.123Z",
+          "cancelledAt": null,
+          "status": "ACTIVE"
+        }
+      ],
+      "page": 0,
+      "size": 20,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+    ```
+
+* **Cancel Registration**
+  * `DELETE /api/events/{eventId}/registrations/{registrationId}`
+  * **Response (204 No Content - Empty Body)**
+
