@@ -22,14 +22,17 @@ public class ParticipantService {
 
     private final ParticipantRepository participantRepository;
     private final ParticipantMapper participantMapper;
+    private final com.eventhub.repository.UserAccountRepository userAccountRepository;
     private final Clock clock;
 
     public ParticipantService(
             ParticipantRepository participantRepository,
             ParticipantMapper participantMapper,
+            com.eventhub.repository.UserAccountRepository userAccountRepository,
             Clock clock) {
         this.participantRepository = participantRepository;
         this.participantMapper = participantMapper;
+        this.userAccountRepository = userAccountRepository;
         this.clock = clock;
     }
 
@@ -47,6 +50,24 @@ public class ParticipantService {
     }
 
     public ParticipantResponse findById(Long id) {
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication != null && authentication.isAuthenticated()) {
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_EVENT_ADMIN"));
+            
+            if (!isAdmin) {
+                String currentEmail = authentication.getName();
+                com.eventhub.domain.UserAccount currentAccount = userAccountRepository.findByEmail(currentEmail)
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Access denied"));
+                
+                if (currentAccount.getParticipant() == null || !currentAccount.getParticipant().getId().equals(id)) {
+                    throw new org.springframework.security.access.AccessDeniedException("A participant can only view their own profile");
+                }
+            }
+        }
+
         Participant participant = participantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Participant not found with id: " + id));
         return participantMapper.toResponse(participant);

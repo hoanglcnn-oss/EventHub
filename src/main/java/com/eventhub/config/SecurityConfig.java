@@ -1,9 +1,11 @@
 package com.eventhub.config;
 
+import com.eventhub.domain.UserRole;
 import com.eventhub.exception.CustomAccessDeniedHandler;
 import com.eventhub.exception.CustomAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -42,7 +44,25 @@ public class SecurityConfig {
                     .accessDeniedHandler(customAccessDeniedHandler)
             )
             .authorizeHttpRequests(auth -> auth
-                    .anyRequest().permitAll() // Tất cả đều mở ở mức template, sẽ phân quyền chi tiết ở Task 5.2
+                    // Public endpoints
+                    .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/{eventId}").permitAll()
+
+                    // Admin only endpoints
+                    .requestMatchers(HttpMethod.POST, "/api/events").hasRole(UserRole.EVENT_ADMIN.name())
+                    .requestMatchers(HttpMethod.PUT, "/api/events/{eventId}").hasRole(UserRole.EVENT_ADMIN.name())
+                    .requestMatchers(HttpMethod.POST, "/api/events/{eventId}/cancellations").hasRole(UserRole.EVENT_ADMIN.name())
+                    .requestMatchers(HttpMethod.POST, "/api/events/{eventId}/publish").hasRole(UserRole.EVENT_ADMIN.name())
+                    .requestMatchers(HttpMethod.GET, "/api/participants").hasRole(UserRole.EVENT_ADMIN.name())
+                    .requestMatchers(HttpMethod.GET, "/api/events/{eventId}/registrations").hasRole(UserRole.EVENT_ADMIN.name())
+
+                    // Admin & Participant endpoints (Ownership checks are implemented in Service layer)
+                    .requestMatchers("/api/participants/{participantId}").hasAnyRole(UserRole.EVENT_ADMIN.name(), UserRole.PARTICIPANT.name())
+                    .requestMatchers(HttpMethod.POST, "/api/events/{eventId}/registrations").hasAnyRole(UserRole.EVENT_ADMIN.name(), UserRole.PARTICIPANT.name())
+                    .requestMatchers(HttpMethod.DELETE, "/api/events/{eventId}/registrations/{registrationId}").hasAnyRole(UserRole.EVENT_ADMIN.name(), UserRole.PARTICIPANT.name())
+
+                    // Fallback: deny all other requests
+                    .anyRequest().denyAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

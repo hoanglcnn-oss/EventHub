@@ -25,6 +25,7 @@ public class RegistrationService {
     private final RegistrationRepository registrationRepository;
     private final EventRepository eventRepository;
     private final ParticipantRepository participantRepository;
+    private final com.eventhub.repository.UserAccountRepository userAccountRepository;
     private final RegistrationMapper registrationMapper;
     private final Clock clock;
 
@@ -32,17 +33,38 @@ public class RegistrationService {
             RegistrationRepository registrationRepository,
             EventRepository eventRepository,
             ParticipantRepository participantRepository,
+            com.eventhub.repository.UserAccountRepository userAccountRepository,
             RegistrationMapper registrationMapper,
             Clock clock) {
         this.registrationRepository = registrationRepository;
         this.eventRepository = eventRepository;
         this.participantRepository = participantRepository;
+        this.userAccountRepository = userAccountRepository;
         this.registrationMapper = registrationMapper;
         this.clock = clock;
     }
 
     @Transactional
     public RegistrationResponse register(Long eventId, RegisterParticipantRequest request) {
+        // Kiểm tra quyền sở hữu nếu là PARTICIPANT
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication != null && authentication.isAuthenticated()) {
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_EVENT_ADMIN"));
+            
+            if (!isAdmin) {
+                String currentEmail = authentication.getName();
+                com.eventhub.domain.UserAccount currentAccount = userAccountRepository.findByEmail(currentEmail)
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Access denied"));
+                
+                if (currentAccount.getParticipant() == null || !currentAccount.getParticipant().getId().equals(request.participantId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("A participant can only register for themselves");
+                }
+            }
+        }
+
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + eventId));
 
@@ -100,6 +122,26 @@ public class RegistrationService {
     public void cancel(Long eventId, Long registrationId) {
         Registration registration = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found with id: " + registrationId));
+
+        // Kiểm tra quyền sở hữu nếu là PARTICIPANT
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication != null && authentication.isAuthenticated()) {
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_EVENT_ADMIN"));
+            
+            if (!isAdmin) {
+                String currentEmail = authentication.getName();
+                com.eventhub.domain.UserAccount currentAccount = userAccountRepository.findByEmail(currentEmail)
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("Access denied"));
+                
+                if (currentAccount.getParticipant() == null || 
+                        !currentAccount.getParticipant().getId().equals(registration.getParticipant().getId())) {
+                    throw new org.springframework.security.access.AccessDeniedException("A participant can only cancel their own registration");
+                }
+            }
+        }
 
         if (!registration.getEvent().getId().equals(eventId)) {
             throw new InvalidCancellationException("Registration does not belong to the specified event.");

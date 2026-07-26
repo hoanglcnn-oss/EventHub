@@ -33,7 +33,7 @@ public class UserAccount {
     @Column(nullable = false)
     private Instant createdAt;
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "participant_id")
     private Participant participant;
 }
