@@ -8,17 +8,20 @@ import com.eventhub.controller.dto.UpdateEventRequest;
 import com.eventhub.controller.mapper.EventMapper;
 import com.eventhub.domain.Event;
 import com.eventhub.domain.EventStatus;
+import com.eventhub.exception.ConflictException;
 import com.eventhub.exception.ResourceNotFoundException;
 import com.eventhub.repository.EventRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Service
+@Transactional(readOnly = true)
 public class EventService {
 
     private final EventRepository eventRepository;
@@ -31,9 +34,10 @@ public class EventService {
         this.clock = clock;
     }
 
+    @Transactional
     public EventResponse create(CreateEventRequest request) {
         Event event = eventMapper.toEntity(request);
-        event.setStatus(EventStatus.DRAFT);
+        event.setStatus(EventStatus.DRAFT); // Mặc định là DRAFT khi tạo mới
         event.setCreatedAt(Instant.now(clock));
         Event saved = eventRepository.save(event);
         return eventMapper.toResponse(saved);
@@ -60,6 +64,7 @@ public class EventService {
         );
     }
 
+    @Transactional
     public EventResponse update(Long id, UpdateEventRequest request) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
@@ -68,17 +73,36 @@ public class EventService {
         event.setDescription(request.description());
         event.setLocation(request.location());
         event.setStartAt(request.startAt());
+        
+        // Điều chỉnh available seats nếu capacity thay đổi
+        int diff = request.capacity() - event.getCapacity();
         event.setCapacity(request.capacity());
+        event.setAvailableSeats(event.getAvailableSeats() + diff);
 
         Event updated = eventRepository.save(event);
         return eventMapper.toResponse(updated);
     }
 
+    @Transactional
     public EventResponse cancel(Long id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         
         event.setStatus(EventStatus.CANCELLED);
+        Event updated = eventRepository.save(event);
+        return eventMapper.toResponse(updated);
+    }
+
+    @Transactional
+    public EventResponse publish(Long id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+        
+        if (event.getStatus() != EventStatus.DRAFT) {
+            throw new ConflictException("Only DRAFT events can be published.");
+        }
+        
+        event.setStatus(EventStatus.OPEN);
         Event updated = eventRepository.save(event);
         return eventMapper.toResponse(updated);
     }

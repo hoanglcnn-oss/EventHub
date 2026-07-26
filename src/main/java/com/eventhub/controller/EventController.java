@@ -76,4 +76,10 @@ public class EventController {
         eventService.cancel(eventId);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{eventId}/publish")
+    public ResponseEntity<EventResponse> publish(@PathVariable Long eventId) {
+        EventResponse response = eventService.publish(eventId);
+        return ResponseEntity.ok(response);
+    }
 }

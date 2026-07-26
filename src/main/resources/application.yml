@@ -2,7 +2,7 @@ spring:
   application:
     name: eventhub
   datasource:
-    url: jdbc:h2:file:./data/eventhub;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE
+    url: jdbc:h2:file:./data/eventhub;AUTO_SERVER=TRUE
     driver-class-name: org.h2.Driver
     username: sa
     password: sa

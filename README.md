@@ -305,3 +305,25 @@ All request bodies and responses use the `camelCase` naming style. Datetime fiel
   * `DELETE /api/events/{eventId}/registrations/{registrationId}`
   * **Response (204 No Content - Empty Body)**
 
+---
+
+## 🔒 Concurrency & Transaction Integrity
+
+### Naive Seat Check Concurrency Limitation
+In our naive seat check implementation, the registration service performs the following sequential steps inside a transaction:
+1. Fetch the event entity: `eventRepository.findById(eventId)`
+2. Check in Java memory if `event.getAvailableSeats() > 0`
+3. Decrement seats: `event.setAvailableSeats(seats - 1)`
+4. Save the event and persist the registration.
+
+**The Limitation:**
+Under high concurrent registration requests for the same event, a race condition occurs. If two transactions read the `availableSeats` simultaneously (e.g., both see `1`), both will pass the check `availableSeats > 0` in memory. They will both decrement it to `0`, persist two separate active registrations, and save the event. 
+*   **Result:** The event is overbooked (2 participants successfully registered when only 1 seat was actually left).
+
+### Mitigation Strategies (Advanced Options)
+To guarantee absolute transactional integrity under concurrency:
+1.  **Pessimistic Locking:** Use `@Lock(LockModeType.PESSIMISTIC_WRITE)` on `findById` to lock the Event row at the database level (`SELECT ... FOR UPDATE`) during the read phase. This forces other concurrent transactions to wait until the current transaction commits or rolls back.
+2.  **Optimistic Locking:** Add a version field (`@Version`) to the `Event` entity. If a concurrent transaction updates the event seats in the database first, the second transaction will fail to commit and throw an `OptimisticLockException`, which we can handle and retry or return a conflict error.
+3.  **Database Constraint:** Add a database constraint `CHECK (available_seats >= 0)` on the `events` table as the final line of defense to reject any query that attempts to decrease seats below zero.
+
+
