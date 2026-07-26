@@ -48,23 +48,27 @@ public class EventController {
             @RequestParam(required = false) String title,
             @RequestParam(required = false) EventStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
             @PageableDefault(size = 20, sort = "startAt", direction = Sort.Direction.ASC) Pageable pageable) {
 
-        if (pageable.getPageNumber() < 0) {
+        int pageNumber = page != null ? page : pageable.getPageNumber();
+        int pageSize = size != null ? size : pageable.getPageSize();
+
+        if (pageNumber < 0) {
             throw new IllegalArgumentException("Page number must be zero or positive");
         }
-        if (pageable.getPageSize() < 1) {
+        if (pageSize < 1) {
             throw new IllegalArgumentException("Page size must be at least one");
         }
 
         // Giới hạn page size tối đa để bảo vệ hệ thống
-        int pageSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+        int cappedSize = Math.min(pageSize, MAX_PAGE_SIZE);
 
         // Luôn đính kèm tie-breaker 'id' để đảm bảo thứ tự sắp xếp nhất quán
-        // (deterministic sorting)
         Sort sort = pageable.getSort().and(Sort.by("id").ascending());
 
-        Pageable cappedPageable = PageRequest.of(pageable.getPageNumber(), pageSize, sort);
+        Pageable cappedPageable = PageRequest.of(pageNumber, cappedSize, sort);
 
         PageResponse<EventSummaryResponse> response = eventService.search(title, status, startAt, cappedPageable);
         return ResponseEntity.ok(response);

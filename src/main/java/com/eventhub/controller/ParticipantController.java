@@ -40,18 +40,23 @@ public class ParticipantController {
 
     @GetMapping
     public ResponseEntity<PageResponse<ParticipantResponse>> findAll(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         
-        if (pageable.getPageNumber() < 0) {
+        int pageNumber = page != null ? page : pageable.getPageNumber();
+        int pageSize = size != null ? size : pageable.getPageSize();
+
+        if (pageNumber < 0) {
             throw new IllegalArgumentException("Page number must be zero or positive");
         }
-        if (pageable.getPageSize() < 1) {
+        if (pageSize < 1) {
             throw new IllegalArgumentException("Page size must be at least one");
         }
 
-        int pageSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+        int cappedSize = Math.min(pageSize, MAX_PAGE_SIZE);
         Sort sort = pageable.getSort().and(Sort.by("id").ascending());
-        Pageable cappedPageable = PageRequest.of(pageable.getPageNumber(), pageSize, sort);
+        Pageable cappedPageable = PageRequest.of(pageNumber, cappedSize, sort);
 
         PageResponse<ParticipantResponse> response = participantService.findAll(cappedPageable);
         return ResponseEntity.ok(response);
