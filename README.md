@@ -326,4 +326,60 @@ To guarantee absolute transactional integrity under concurrency:
 2.  **Optimistic Locking:** Add a version field (`@Version`) to the `Event` entity. If a concurrent transaction updates the event seats in the database first, the second transaction will fail to commit and throw an `OptimisticLockException`, which we can handle and retry or return a conflict error.
 3.  **Database Constraint:** Add a database constraint `CHECK (available_seats >= 0)` on the `events` table as the final line of defense to reject any query that attempts to decrease seats below zero.
 
+---
+
+## 🔒 Authentication & Authorization Matrix
+
+This project implements stateless JWT-based authentication. Roles:
+*   **EVENT_ADMIN**: Can perform any CRUD operation, publish/cancel events, view all participants and registrations.
+*   **PARTICIPANT**: Can view events, view their own participant profile, register for events, and cancel their own registrations.
+
+### Authenticated Endpoints
+
+| Endpoint | Method | Required Role | Ownership Enforced |
+| :--- | :--- | :--- | :--- |
+| `/api/auth/register` | `POST` | Public | N/A |
+| `/api/auth/login` | `POST` | Public | N/A |
+| `/api/events` | `GET` | Public | N/A |
+| `/api/events/{id}` | `GET` | Public | N/A |
+| `/api/events` | `POST` | `EVENT_ADMIN` | N/A |
+| `/api/events/{id}` | `PUT` | `EVENT_ADMIN` | N/A |
+| `/api/events/{id}/publish` | `POST` | `EVENT_ADMIN` | N/A |
+| `/api/events/{id}/cancellations` | `POST` | `EVENT_ADMIN` | N/A |
+| `/api/participants` | `GET` | `EVENT_ADMIN` | N/A |
+| `/api/participants/{id}` | `GET` | `EVENT_ADMIN` or `PARTICIPANT` | Yes (Owner only) |
+| `/api/events/{id}/registrations` | `POST` | `EVENT_ADMIN` or `PARTICIPANT` | Yes (Owner only) |
+| `/api/events/{id}/registrations` | `GET` | `EVENT_ADMIN` | N/A |
+| `/api/events/{id}/registrations/{regId}` | `DELETE` | `EVENT_ADMIN` or `PARTICIPANT` | Yes (Owner only) |
+| `/actuator/health`, `/actuator/info` | `GET` | Public | N/A |
+| `/actuator/**` | Any | `EVENT_ADMIN` | N/A |
+
+### Seed Administrator Credentials
+
+By default, the application runs `AdminBootstrap` at startup to create an idempotent administrator account in development:
+*   **Email:** `admin@eventhub.com`
+*   **Password:** `AdminPassword123!`
+
+For production deployments, do not expose default credentials. Override them using environment variables:
+```bash
+ADMIN_EMAIL=prod-admin@yourdomain.com
+ADMIN_PASSWORD=SecurePasswordSecure123!
+```
+
+---
+
+## 🐳 Docker Deployment
+
+The application features a secure, optimized multi-stage `Dockerfile`.
+
+### Build the Image
+```bash
+docker build -t eventhub:latest .
+```
+
+### Run the Container
+```bash
+docker run -p 8080:8080 -e "ADMIN_EMAIL=admin@eventhub.com" -e "ADMIN_PASSWORD=AdminPassword123!" eventhub:latest
+```
+
 

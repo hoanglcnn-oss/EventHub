@@ -47,6 +47,8 @@ public class SecurityConfig {
                     // Public endpoints
                     .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/{eventId}").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll()
+                    .requestMatchers("/actuator/**").hasRole(UserRole.EVENT_ADMIN.name())
 
                     // Admin only endpoints
                     .requestMatchers(HttpMethod.POST, "/api/events").hasRole(UserRole.EVENT_ADMIN.name())
