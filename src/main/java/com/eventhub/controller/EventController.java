@@ -50,6 +50,13 @@ public class EventController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,
             @PageableDefault(size = 20, sort = "startAt", direction = Sort.Direction.ASC) Pageable pageable) {
 
+        if (pageable.getPageNumber() < 0) {
+            throw new IllegalArgumentException("Page number must be zero or positive");
+        }
+        if (pageable.getPageSize() < 1) {
+            throw new IllegalArgumentException("Page size must be at least one");
+        }
+
         // Giới hạn page size tối đa để bảo vệ hệ thống
         int pageSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
 

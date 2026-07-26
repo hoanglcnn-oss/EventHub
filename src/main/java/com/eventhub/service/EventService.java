@@ -8,7 +8,8 @@ import com.eventhub.controller.dto.UpdateEventRequest;
 import com.eventhub.controller.mapper.EventMapper;
 import com.eventhub.domain.Event;
 import com.eventhub.domain.EventStatus;
-import com.eventhub.exception.ConflictException;
+import com.eventhub.exception.InvalidCancellationException;
+import com.eventhub.exception.InvalidEventStateException;
 import com.eventhub.exception.ResourceNotFoundException;
 import com.eventhub.repository.EventRepository;
 import org.springframework.data.domain.Page;
@@ -88,6 +89,10 @@ public class EventService {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            throw new InvalidCancellationException("Event is already cancelled.");
+        }
+        
         event.setStatus(EventStatus.CANCELLED);
         Event updated = eventRepository.save(event);
         return eventMapper.toResponse(updated);
@@ -99,7 +104,7 @@ public class EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         
         if (event.getStatus() != EventStatus.DRAFT) {
-            throw new ConflictException("Only DRAFT events can be published.");
+            throw new InvalidEventStateException("Only DRAFT events can be published.");
         }
         
         event.setStatus(EventStatus.OPEN);

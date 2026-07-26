@@ -5,8 +5,7 @@ import com.eventhub.controller.dto.RegisterParticipantRequest;
 import com.eventhub.controller.dto.RegistrationResponse;
 import com.eventhub.controller.mapper.RegistrationMapper;
 import com.eventhub.domain.*;
-import com.eventhub.exception.ConflictException;
-import com.eventhub.exception.ResourceNotFoundException;
+import com.eventhub.exception.*;
 import com.eventhub.repository.EventRepository;
 import com.eventhub.repository.ParticipantRepository;
 import com.eventhub.repository.RegistrationRepository;
@@ -50,21 +49,21 @@ public class RegistrationService {
         Participant participant = participantRepository.findById(request.participantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Participant not found with id: " + request.participantId()));
 
-        // Kiểm tra các quy tắc nghiệp vụ (Task 3 rules)
+        // Kiểm tra các quy tắc nghiệp vụ (Task 3 & 4 rules)
         if (event.getStatus() != EventStatus.OPEN) {
-            throw new ConflictException("Event is not open for registration. Current status: " + event.getStatus());
+            throw new InvalidEventStateException("Event is not open for registration. Current status: " + event.getStatus());
         }
 
-        if (event.getStartAt().isBefore(LocalDateTime.now(clock).plusHours(0))) { // start time must be in future
-            throw new ConflictException("Cannot register for an event that has already started or passed.");
+        if (event.getStartAt().isBefore(LocalDateTime.now(clock).plusHours(0))) {
+            throw new InvalidEventStateException("Cannot register for an event that has already started or passed.");
         }
 
         if (event.getAvailableSeats() <= 0) {
-            throw new ConflictException("Event is full capacity. No seats available.");
+            throw new EventFullCapacityException(eventId);
         }
 
         if (registrationRepository.existsByEventIdAndParticipantIdAndStatus(eventId, request.participantId(), RegistrationStatus.ACTIVE)) {
-            throw new ConflictException("Participant is already registered for this event.");
+            throw new DuplicateRegistrationException(eventId, request.participantId());
         }
 
         // Tạo bản ghi đăng ký và giảm ghế trống
@@ -103,11 +102,11 @@ public class RegistrationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Registration not found with id: " + registrationId));
 
         if (!registration.getEvent().getId().equals(eventId)) {
-            throw new ConflictException("Registration does not belong to the specified event.");
+            throw new InvalidCancellationException("Registration does not belong to the specified event.");
         }
 
         if (registration.getStatus() != RegistrationStatus.ACTIVE) {
-            throw new ConflictException("Only ACTIVE registrations can be cancelled.");
+            throw new InvalidCancellationException("Only ACTIVE registrations can be cancelled.");
         }
 
         registration.setStatus(RegistrationStatus.CANCELLED);

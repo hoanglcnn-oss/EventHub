@@ -5,7 +5,7 @@ import com.eventhub.controller.dto.PageResponse;
 import com.eventhub.controller.dto.ParticipantResponse;
 import com.eventhub.controller.mapper.ParticipantMapper;
 import com.eventhub.domain.Participant;
-import com.eventhub.exception.ConflictException;
+import com.eventhub.exception.DuplicateEmailException;
 import com.eventhub.exception.ResourceNotFoundException;
 import com.eventhub.repository.ParticipantRepository;
 import org.springframework.data.domain.Page;
@@ -36,7 +36,7 @@ public class ParticipantService {
     @Transactional
     public ParticipantResponse create(CreateParticipantRequest request) {
         if (participantRepository.findByEmail(request.email()).isPresent()) {
-            throw new ConflictException("Email is already in use: " + request.email());
+            throw new DuplicateEmailException(request.email());
         }
 
         Participant participant = participantMapper.toEntity(request);

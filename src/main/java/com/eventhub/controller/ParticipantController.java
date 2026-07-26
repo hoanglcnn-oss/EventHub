@@ -42,6 +42,13 @@ public class ParticipantController {
     public ResponseEntity<PageResponse<ParticipantResponse>> findAll(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         
+        if (pageable.getPageNumber() < 0) {
+            throw new IllegalArgumentException("Page number must be zero or positive");
+        }
+        if (pageable.getPageSize() < 1) {
+            throw new IllegalArgumentException("Page size must be at least one");
+        }
+
         int pageSize = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
         Sort sort = pageable.getSort().and(Sort.by("id").ascending());
         Pageable cappedPageable = PageRequest.of(pageable.getPageNumber(), pageSize, sort);

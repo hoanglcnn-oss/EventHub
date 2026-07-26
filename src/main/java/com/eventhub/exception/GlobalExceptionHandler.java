@@ -126,6 +126,58 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleIllegalArgumentException(
+            IllegalArgumentException ex, HttpServletRequest request) {
+        
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_PARAMETER",
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiError> handleResourceNotFound(
+            ResourceNotFoundException ex, HttpServletRequest request) {
+        
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                "RESOURCE_NOT_FOUND",
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiError> handleConflictException(
+            ConflictException ex, HttpServletRequest request) {
+        
+        String code = "CONFLICT_ERROR";
+        if (ex instanceof DuplicateEmailException) {
+            code = "DUPLICATE_EMAIL";
+        } else if (ex instanceof DuplicateRegistrationException) {
+            code = "DUPLICATE_REGISTRATION";
+        } else if (ex instanceof InvalidEventStateException) {
+            code = "INVALID_EVENT_STATE";
+        } else if (ex instanceof EventFullCapacityException) {
+            code = "EVENT_FULL_CAPACITY";
+        } else if (ex instanceof InvalidCancellationException) {
+            code = "INVALID_CANCELLATION";
+        }
+
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                code,
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpectedException(
             Exception ex, HttpServletRequest request) {
